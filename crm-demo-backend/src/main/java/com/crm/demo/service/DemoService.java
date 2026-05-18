@@ -97,7 +97,12 @@ public class DemoService {
         result.setCountryOfOrigin(header.getOrDefault("countryOfOrigin", "China"));
         result.setPoReference(header.getOrDefault("poReference", ""));
 
-        String contractNo = "IT-" + customer.getCustomerCode() + "-" + LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        String base = "IT-" + customer.getCustomerCode() + "-" + LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        String contractNo = base;
+        int suffix = 1;
+        while (poMapper.selectCount(new LambdaQueryWrapper<PurchaseOrder>().eq(PurchaseOrder::getContractNo, contractNo)) > 0) {
+            contractNo = base + "-" + String.format("%02d", suffix++);
+        }
         result.setContractNo(contractNo);
 
         // Find data start row (column header row)
