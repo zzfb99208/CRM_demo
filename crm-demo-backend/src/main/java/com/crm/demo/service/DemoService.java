@@ -6,6 +6,7 @@ import com.crm.demo.dto.PoImportResult.PoItemRow;
 import com.crm.demo.entity.*;
 import com.crm.demo.mapper.*;
 import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.ss.usermodel.DataFormatter;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -133,7 +134,7 @@ public class DemoService {
         BigDecimal totalValue = BigDecimal.ZERO;
         for (int i = dataStart; i <= sheet.getLastRowNum(); i++) {
             Row row = sheet.getRow(i);
-            if (row == null || isRowEmpty(row, 10)) continue;
+            if (row == null || !isDataRow(row)) continue;
             PoItemRow item = new PoItemRow();
             item.setLineNo(result.getItems().size() + 1);
             item.setCustomerPoNo(getCellStr(row, 1));
@@ -573,19 +574,38 @@ public class DemoService {
     }
 
     // ==================== Helpers ====================
+    private final DataFormatter dataFormatter = new DataFormatter();
+
     private String getCellStr(Row row, int col) {
-        org.apache.poi.ss.usermodel.Cell c = row.getCell(col); if (c == null) return null;
-        return c.toString().trim();
+        org.apache.poi.ss.usermodel.Cell c = row.getCell(col);
+        if (c == null) return null;
+        // Use DataFormatter to avoid scientific notation (e.g. 2004009001 -> "2.004009001E9")
+        String s = dataFormatter.formatCellValue(c).trim();
+        // Handle scientific notation from numeric cells that DataFormatter might miss
+        if (s.contains("E") || s.contains("e")) {
+            try { s = new BigDecimal(s).toPlainString(); } catch (Exception ignored) {}
+        }
+        return s;
     }
     private int getCellInt(Row row, int col) {
-        try { org.apache.poi.ss.usermodel.Cell c = row.getCell(col); if (c == null) return 0; return (int) c.getNumericCellValue(); } catch (Exception e) { try { return Integer.parseInt(getCellStr(row, col)); } catch (Exception e2) { return 0; } }
+        String s = getCellStr(row, col);
+        if (s == null || s.isEmpty()) return 0;
+        try { return Integer.parseInt(s.replaceAll("\\..*", "")); } catch (Exception e) { return 0; }
     }
     private String getRowText(Row row, int maxCol) {
         StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < maxCol; i++) { org.apache.poi.ss.usermodel.Cell c = row.getCell(i); if (c != null) sb.append(c.toString()).append(" "); }
+        for (int i = 0; i < maxCol; i++) { org.apache.poi.ss.usermodel.Cell c = row.getCell(i); if (c != null) sb.append(getCellStr(row, i)).append(" "); }
         return sb.toString();
     }
     private boolean isRowEmpty(Row row, int maxCol) { return getRowText(row, maxCol).trim().isEmpty(); }
+    private boolean isDataRow(Row row) {
+        // Stop parsing at non-data rows: empty, totals, footers
+        String firstCell = getCellStr(row, 0);
+        if (firstCell == null || firstCell.isEmpty()) return false;
+        if (firstCell.equalsIgnoreCase("TOTAL")) return false;
+        try { Integer.parseInt(firstCell); return true; } // Must start with a valid number
+        catch (NumberFormatException e) { return false; }
+    }
     private BigDecimal parseBigDecimal(String s) { try { return new BigDecimal(s); } catch (Exception e) { return BigDecimal.ONE; } }
     private String extractAfterColon(Row row, int col) {
         String s = getCellStr(row, col); if (s == null) return "";
