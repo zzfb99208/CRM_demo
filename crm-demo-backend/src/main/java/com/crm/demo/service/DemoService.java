@@ -243,7 +243,73 @@ public class DemoService {
         ProformaInvoice pi = piMapper.selectById(piId);
         List<ProformaInvoiceItem> items = piItemMapper.selectList(
             new LambdaQueryWrapper<ProformaInvoiceItem>().eq(ProformaInvoiceItem::getPiId, piId));
-        return buildPIResponse(pi, items);
+        Map<String, Object> result = buildPIResponse(pi, items);
+        // Add per-item stock info
+        List<Map<String, Object>> enrichedItems = new ArrayList<>();
+        for (ProformaInvoiceItem item : items) {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("id", item.getId()); m.put("lineNo", item.getLineNo());
+            m.put("customerPoNo", item.getCustomerPoNo()); m.put("productId", item.getProductId());
+            m.put("catNo", item.getCatNo()); m.put("refNo", item.getRefNo());
+            m.put("description", item.getDescription()); m.put("qty1", item.getQty1());
+            m.put("unit1", item.getUnit1()); m.put("qty2", item.getQty2()); m.put("unit2", item.getUnit2());
+            m.put("unitPriceMultiplier", item.getUnitPriceMultiplier());
+            m.put("discountFlag", item.getDiscountFlag()); m.put("lineValue", item.getLineValue());
+            if (item.getProductId() != null) {
+                int avail = inventoryMapper.selectList(new LambdaQueryWrapper<Inventory>().eq(Inventory::getProductId, item.getProductId()))
+                    .stream().mapToInt(Inventory::getQuantityKit).sum();
+                m.put("stockAvailable", avail);
+            }
+            enrichedItems.add(m);
+        }
+        result.put("items", enrichedItems);
+        return result;
+    }
+
+    // ==================== PI Online Edit ====================
+    @Transactional
+    public Map<String, Object> updatePIItem(Long piId, Long itemId, Map<String, Object> updates) {
+        ProformaInvoiceItem item = piItemMapper.selectById(itemId);
+        if (item == null || !item.getPiId().equals(piId)) {
+            throw new RuntimeException("PI item not found");
+        }
+        // Update editable fields
+        if (updates.containsKey("catNo")) {
+            String catNo = (String) updates.get("catNo");
+            item.setCatNo(catNo);
+            Product p = productMapper.selectOne(new LambdaQueryWrapper<Product>().eq(Product::getCoyoteCode, catNo));
+            if (p != null) { item.setProductId(p.getId()); item.setRefNo(p.getMenariniCode()); }
+        }
+        if (updates.containsKey("refNo")) item.setRefNo((String) updates.get("refNo"));
+        if (updates.containsKey("description")) item.setDescription((String) updates.get("description"));
+        if (updates.containsKey("qty1")) {
+            int newQty = ((Number) updates.get("qty1")).intValue();
+            item.setQty1(newQty);
+            item.setQty2(newQty * 24); // approx: each kit = 24 tests
+        }
+        if (updates.containsKey("qty2")) item.setQty2(((Number) updates.get("qty2")).intValue());
+        piItemMapper.updateById(item);
+
+        // Recalculate total value
+        ProformaInvoice pi = piMapper.selectById(piId);
+        List<ProformaInvoiceItem> items = piItemMapper.selectList(
+            new LambdaQueryWrapper<ProformaInvoiceItem>().eq(ProformaInvoiceItem::getPiId, piId));
+        BigDecimal total = items.stream().map(i -> i.getLineValue() != null ? i.getLineValue() : BigDecimal.ZERO).reduce(BigDecimal.ZERO, BigDecimal::add);
+        pi.setTotalValue(total);
+        piMapper.updateById(pi);
+
+        // Stock check
+        int avail = 0;
+        if (item.getProductId() != null) {
+            avail = inventoryMapper.selectList(new LambdaQueryWrapper<Inventory>().eq(Inventory::getProductId, item.getProductId()))
+                .stream().mapToInt(Inventory::getQuantityKit).sum();
+        }
+        Map<String, Object> result = new java.util.LinkedHashMap<>();
+        result.put("item", item);
+        result.put("totalValue", total);
+        result.put("stockAvailable", avail);
+        result.put("stockSufficient", avail >= item.getQty1());
+        return result;
     }
 
     // ==================== PI Reimport ====================

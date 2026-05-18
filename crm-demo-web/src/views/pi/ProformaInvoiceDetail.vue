@@ -4,6 +4,7 @@
     <div style="display:flex;justify-content:space-between;align-items:center">
       <h2 v-if="pi">Invoice: {{ pi.invoiceNo }} <el-tag :type="st(pi.status)">{{ pi.status }}</el-tag></h2>
       <div>
+        <el-button :type="editing?'warning':''" @click="toggleEdit">{{ editing?'退出编辑':'编辑 ✏' }}</el-button>
         <el-button @click="doExportPI">导出 PI ⬇</el-button>
         <el-upload :auto-upload="false" :on-change="handleReimport" :limit="1" accept=".xlsx,.xls" style="display:inline-block;margin-left:8px">
           <el-button type="warning">导入修改后的 PI ⬆</el-button>
@@ -19,22 +20,67 @@
       <el-descriptions-item label="Transport">{{ pi.transportMethod }}</el-descriptions-item>
       <el-descriptions-item label="PO Reference" :span="2">{{ pi.poReference }}</el-descriptions-item>
     </el-descriptions>
+
     <el-table v-if="items.length" :data="items" stripe style="margin-top:10px">
       <el-table-column prop="lineNo" label="#" width="50" />
       <el-table-column prop="customerPoNo" label="Order #" width="100" />
-      <el-table-column prop="catNo" label="CAT.#" width="150" />
-      <el-table-column prop="refNo" label="Ref No." width="90" />
-      <el-table-column prop="description" label="DESCRIPTION" min-width="200" />
-      <el-table-column prop="qty1" label="Qty" width="60" />
+      <el-table-column prop="catNo" label="CAT.#" width="150">
+        <template #default="{row}">
+          <el-input v-if="editing" v-model="row.catNo" size="small" />
+          <span v-else>{{ row.catNo }}</span>
+        </template>
+      </el-table-column>
+      <el-table-column prop="refNo" label="Ref No." width="90">
+        <template #default="{row}">
+          <el-input v-if="editing" v-model="row.refNo" size="small" />
+          <span v-else>{{ row.refNo }}</span>
+        </template>
+      </el-table-column>
+      <el-table-column prop="description" label="DESCRIPTION" min-width="200">
+        <template #default="{row}">
+          <el-input v-if="editing" v-model="row.description" size="small" />
+          <span v-else>{{ row.description }}</span>
+        </template>
+      </el-table-column>
+      <el-table-column prop="qty1" label="Qty(K)" width="80">
+        <template #default="{row}">
+          <el-input-number v-if="editing" v-model="row.qty1" :min="1" size="small" controls-position="right" style="width:80px" />
+          <span v-else>{{ row.qty1 }}</span>
+        </template>
+      </el-table-column>
       <el-table-column prop="unit1" label="Unit" width="60" />
+      <el-table-column label="库存" width="70" v-if="editing">
+        <template #default="{row}">
+          <el-tag :type="(stockMap[row.lineNo]||0) >= row.qty1 ? 'success' : 'danger'" size="small">{{ stockMap[row.lineNo] || '-' }}</el-tag>
+        </template>
+      </el-table-column>
       <el-table-column prop="lineValue" label="Value" width="90" />
-      <el-table-column prop="discountFlag" label="Free" width="60"><template #default="{row}">{{ row.discountFlag?'Y':'' }}</template></el-table-column>
+      <el-table-column prop="discountFlag" label="Free" width="60">
+        <template #default="{row}">{{ row.discountFlag?'Y':'' }}</template>
+      </el-table-column>
+      <el-table-column label="操作" width="80" v-if="editing">
+        <template #default="{row}">
+          <el-button type="primary" size="small" @click="saveRow(row)">保存</el-button>
+        </template>
+      </el-table-column>
     </el-table>
-    <div v-if="pi" style="margin-top:10px"><strong>Total Value: {{ pi.totalValue }}</strong></div>
-    <div v-if="warnings.length" style="margin-top:10px"><el-alert v-for="w in warnings" :key="w.lineNo" :title="`行${w.lineNo}: ${w.productName} 需求${w.required}, 库存${w.available}`" type="warning" show-icon /></div>
+
+    <div v-if="pi" style="margin-top:10px">
+      <strong>Total Value: {{ pi.totalValue }}</strong>
+      <span v-if="editing" style="margin-left:12px;color:#909399">（保存单项后自动更新）</span>
+    </div>
+    <div v-if="warnings.length" style="margin-top:10px">
+      <el-alert v-for="w in warnings" :key="w.lineNo" :title="`行${w.lineNo}: ${w.productName} 需求${w.required}, 库存${w.available}`" type="warning" show-icon />
+    </div>
+
     <div style="margin-top:20px">
+      <template v-if="editing">
+        <el-button @click="cancelEdit">取消编辑</el-button>
+        <el-button type="success" @click="saveAll">保存全部修改</el-button>
+      </template>
       <el-button v-if="pi && pi.status==='APPROVED'" type="primary" @click="generatePL">生成 Packing List</el-button>
     </div>
+
     <!-- Reimport diff dialog -->
     <el-dialog v-model="diffVisible" title="PI 重新导入 — 差异对比" width="80%">
       <div v-if="diffResult">
@@ -51,20 +97,90 @@
     </el-dialog>
   </div>
 </template>
+
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getPIDetail, exportPI, reimportPI } from '@/api/proformaInvoice'
+import { getPIDetail, exportPI, reimportPI, updatePIItem } from '@/api/proformaInvoice'
 import { generatePL as apiGeneratePL } from '@/api/packingList'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
+
 const route = useRoute(); const router = useRouter()
 const pi = ref(null); const items = ref([]); const warnings = ref([]); const loading = ref(false)
-const diffVisible = ref(false); const diffResult = ref(null); const reimportFile = ref(null)
+const editing = ref(false); const originalItems = ref([])
+const stockMap = reactive({})
+const diffVisible = ref(false); const diffResult = ref(null)
+
 const st = (s) => ({ 'APPROVED':'success','PACKING_GENERATED':'primary' }[s]||'info')
 const dt = (t) => ({ 'MODIFIED':'warning','ADDED':'primary','DELETED':'danger' }[t]||'info')
-const load = async () => { loading.value = true; try { const d = await getPIDetail(route.params.id); pi.value = d.pi; items.value = d.items; warnings.value = d.stockWarnings||[] } finally { loading.value = false } }
+
+const load = async () => {
+  loading.value = true
+  try {
+    const d = await getPIDetail(route.params.id)
+    pi.value = d.pi; items.value = d.items; warnings.value = d.stockWarnings||[]
+    // Load stock info for each item
+    for (const it of items.value) {
+      stockMap[it.lineNo] = it.stockAvailable ?? '-'
+    }
+  } finally { loading.value = false }
+}
+
+const toggleEdit = () => {
+  if (!editing.value) {
+    originalItems.value = JSON.parse(JSON.stringify(items.value))
+    editing.value = true
+  } else {
+    editing.value = false
+  }
+}
+
+const cancelEdit = () => {
+  items.value = JSON.parse(JSON.stringify(originalItems.value))
+  editing.value = false
+}
+
+const saveRow = async (row) => {
+  loading.value = true
+  try {
+    const result = await updatePIItem(pi.value.id, row.id, {
+      catNo: row.catNo, refNo: row.refNo, description: row.description, qty1: row.qty1
+    })
+    stockMap[row.lineNo] = result.stockAvailable
+    pi.value.totalValue = result.totalValue
+    ElMessage.success(`行 ${row.lineNo} 已保存`)
+  } catch (e) { ElMessage.error('保存失败') }
+  finally { loading.value = false }
+}
+
+const saveAll = async () => {
+  loading.value = true
+  try {
+    for (const row of items.value) {
+      await updatePIItem(pi.value.id, row.id, {
+        catNo: row.catNo, refNo: row.refNo, description: row.description, qty1: row.qty1
+      })
+    }
+    const d = await getPIDetail(route.params.id)
+    pi.value = d.pi; items.value = d.items; warnings.value = d.stockWarnings||[]
+    editing.value = false
+    ElMessage.success('全部修改已保存')
+  } catch (e) { ElMessage.error('保存失败') }
+  finally { loading.value = false }
+}
+
 const doExportPI = () => exportPI(pi.value.id)
-const handleReimport = async (f) => { loading.value = true; try { diffResult.value = await reimportPI(pi.value.id, f.raw); diffVisible.value = true } catch(e) { ElMessage.error('导入失败') } finally { loading.value = false } }
-const generatePL = async () => { loading.value = true; try { const pl = await apiGeneratePL(pi.value.id); ElMessage.success('PL 已生成'); router.push(`/packing-lists/${pl.pl.id}`) } catch(e) { ElMessage.error('生成失败') } finally { loading.value = false } }
+const handleReimport = async (f) => {
+  loading.value = true
+  try { diffResult.value = await reimportPI(pi.value.id, f.raw); diffVisible.value = true }
+  catch(e) { ElMessage.error('导入失败') }
+  finally { loading.value = false }
+}
+const generatePL = async () => {
+  loading.value = true
+  try { const pl = await apiGeneratePL(pi.value.id); ElMessage.success('PL 已生成'); router.push(`/packing-lists/${pl.pl.id}`) }
+  catch(e) { ElMessage.error('生成失败') }
+  finally { loading.value = false }
+}
 onMounted(() => load())
 </script>

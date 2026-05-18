@@ -31,6 +31,13 @@ public class ProformaInvoiceController {
         try { demoService.exportPI(id, response); } catch (Exception e) {}
     }
 
+    @PutMapping("/{piId}/items/{itemId}")
+    public R<?> updateItem(@PathVariable Long piId, @PathVariable Long itemId,
+                           @RequestBody java.util.Map<String, Object> updates) {
+        try { return R.ok(demoService.updatePIItem(piId, itemId, updates)); }
+        catch (Exception e) { return R.fail("Update failed: " + e.getMessage()); }
+    }
+
     @PostMapping("/{id}/import")
     public R<?> reimport(@PathVariable Long id, @RequestParam("file") MultipartFile file) {
         try { return R.ok(demoService.reimportPI(id, file)); }

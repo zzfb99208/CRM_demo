@@ -16,6 +16,10 @@ export function exportPI(id) {
   window.open(`/api/proforma-invoices/${id}/export`)
 }
 
+export function updatePIItem(piId, itemId, data) {
+  return request.put(`/proforma-invoices/${piId}/items/${itemId}`, data)
+}
+
 export function reimportPI(id, file) {
   const form = new FormData()
   form.append('file', file)
