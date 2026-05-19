@@ -171,7 +171,7 @@ com.crm.demo
 | POST | `/api/proforma-invoices/generate/{poId}` | **PO→PI 自动转换**（商品名称关联编码映射） |
 | GET | `/api/proforma-invoices` | PI 列表 |
 | GET | `/api/proforma-invoices/{id}` | PI 详情（Invoice 格式） |
-| PUT | `/api/proforma-invoices/{id}` | 修正 PI 行项目 Ref No. |
+| PUT | `/api/proforma-invoices/{id}` | **★ 编辑 PI 表头字段**（Invoice Date/Delivery/Payment/Transport） |
 | GET | `/api/proforma-invoices/{id}/export` | **导出 PI 为 Excel (Invoice 格式)** |
 | POST | `/api/proforma-invoices/{id}/import` | **★ 重新导入修改后的 PI Excel** |
 

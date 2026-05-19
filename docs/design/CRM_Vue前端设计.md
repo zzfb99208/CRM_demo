@@ -307,7 +307,8 @@ const routes = [
 └──────────────────────────────────────────────────────┘
 ```
 
-- 顶部 **"导出 PI"** 按钮 → `GET /api/proforma-invoices/{id}/export` → 下载 `Invoice_IT-AMD-20260514_2026-05-14.xlsx`
+- 编辑模式下，表头 Invoice Date / Delivery / Payment / Transport / Origin 可内联编辑
+- 顶部 **"导出 PI"** 按钮 → `GET /api/proforma-invoices/{id}/export` → 下载
 - 点击"生成 Packing List"→ 调用 API `POST /api/packing-lists/generate/{piId}`
 
 ### 5.6 PL 详情页 — Packing List 格式 (PackingListDetail.vue) ★

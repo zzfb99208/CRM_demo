@@ -318,6 +318,24 @@ public class DemoService {
         return result;
     }
 
+    // ==================== PI Header Edit ====================
+    @Transactional
+    public Map<String, Object> updatePIHeader(Long piId, Map<String, Object> updates) {
+        ProformaInvoice pi = piMapper.selectById(piId);
+        if (updates.containsKey("invoiceDate"))
+            pi.setInvoiceDate(LocalDate.parse((String) updates.get("invoiceDate")));
+        if (updates.containsKey("deliveryTerms"))
+            pi.setDeliveryTerms((String) updates.get("deliveryTerms"));
+        if (updates.containsKey("paymentTerms"))
+            pi.setPaymentTerms((String) updates.get("paymentTerms"));
+        if (updates.containsKey("transportMethod"))
+            pi.setTransportMethod((String) updates.get("transportMethod"));
+        if (updates.containsKey("countryOfOrigin"))
+            pi.setCountryOfOrigin((String) updates.get("countryOfOrigin"));
+        piMapper.updateById(pi);
+        return Map.of("piId", piId, "status", "updated");
+    }
+
     // ==================== PI Submit & Approval ====================
     @Transactional
     public Map<String, Object> submitPIForApproval(Long piId) {

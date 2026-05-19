@@ -13,11 +13,27 @@
     </div>
     <el-descriptions v-if="pi" :column="2" border style="margin-top:10px">
       <el-descriptions-item label="Invoice #">{{ pi.invoiceNo }}</el-descriptions-item>
-      <el-descriptions-item label="Date">{{ pi.invoiceDate }}</el-descriptions-item>
+      <el-descriptions-item label="Date">
+        <el-date-picker v-if="editing" v-model="pi.invoiceDate" type="date" size="small" value-format="YYYY-MM-DD" style="width:160px" />
+        <span v-else>{{ pi.invoiceDate }}</span>
+      </el-descriptions-item>
       <el-descriptions-item label="Contract #">{{ pi.contractNo }}</el-descriptions-item>
-      <el-descriptions-item label="Delivery">{{ pi.deliveryTerms }}</el-descriptions-item>
-      <el-descriptions-item label="Payment">{{ pi.paymentTerms }}</el-descriptions-item>
-      <el-descriptions-item label="Transport">{{ pi.transportMethod }}</el-descriptions-item>
+      <el-descriptions-item label="Delivery">
+        <el-select v-if="editing" v-model="pi.deliveryTerms" size="small" style="width:120px">
+          <el-option v-for="t in ['FCA','FOB','CIF','EXW','DAP']" :key="t" :label="t" :value="t" />
+        </el-select>
+        <span v-else>{{ pi.deliveryTerms }}</span>
+      </el-descriptions-item>
+      <el-descriptions-item label="Payment">
+        <el-input v-if="editing" v-model="pi.paymentTerms" size="small" style="width:200px" />
+        <span v-else>{{ pi.paymentTerms }}</span>
+      </el-descriptions-item>
+      <el-descriptions-item label="Transport">
+        <el-select v-if="editing" v-model="pi.transportMethod" size="small" style="width:120px">
+          <el-option v-for="t in ['Air','Sea','Land']" :key="t" :label="t" :value="t" />
+        </el-select>
+        <span v-else>{{ pi.transportMethod }}</span>
+      </el-descriptions-item>
       <el-descriptions-item label="PO Reference" :span="2">{{ pi.poReference }}</el-descriptions-item>
     </el-descriptions>
 
@@ -158,6 +174,13 @@ const saveRow = async (row) => {
 const saveAll = async () => {
   loading.value = true
   try {
+    // Save header fields first
+    await axios.put(`/api/proforma-invoices/${pi.value.id}`, {
+      invoiceDate: pi.value.invoiceDate,
+      deliveryTerms: pi.value.deliveryTerms,
+      paymentTerms: pi.value.paymentTerms,
+      transportMethod: pi.value.transportMethod
+    }, { headers: { Authorization: 'Bearer ' + localStorage.getItem('token') } })
     for (const row of items.value) {
       await updatePIItem(pi.value.id, row.id, {
         catNo: row.catNo, refNo: row.refNo, description: row.description, qty1: row.qty1

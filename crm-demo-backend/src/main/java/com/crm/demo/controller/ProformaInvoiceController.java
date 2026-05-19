@@ -12,6 +12,12 @@ public class ProformaInvoiceController {
     private final DemoService demoService;
     public ProformaInvoiceController(DemoService ds) { this.demoService = ds; }
 
+    @PutMapping("/{id}")
+    public R<?> updateHeader(@PathVariable Long id, @RequestBody java.util.Map<String, Object> updates) {
+        try { return R.ok(demoService.updatePIHeader(id, updates)); }
+        catch (Exception e) { return R.fail("Update failed: " + e.getMessage()); }
+    }
+
     @PostMapping("/generate/{poId}")
     public R<?> generate(@PathVariable Long poId) {
         try { return R.ok(demoService.generatePI(poId)); }
