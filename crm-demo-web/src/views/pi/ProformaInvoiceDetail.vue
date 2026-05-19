@@ -59,9 +59,9 @@
           <span v-else>{{ row.description }}</span>
         </template>
       </el-table-column>
-      <el-table-column prop="qty1" label="Qty(K)" width="80">
+      <el-table-column prop="qty1" label="Qty(K)" width="130">
         <template #default="{row}">
-          <el-input-number v-if="editing" v-model="row.qty1" :min="1" size="small" controls-position="right" style="width:80px" />
+          <el-input-number v-if="editing" v-model="row.qty1" :min="1" size="small" controls-position="right" style="width:110px" />
           <span v-else>{{ row.qty1 }}</span>
         </template>
       </el-table-column>
@@ -173,9 +173,23 @@ const saveRow = async (row) => {
 }
 
 const saveAll = async () => {
+  // Check stock limits before saving
+  const overStockItems = items.value.filter(row =>
+    (stockMap[row.lineNo] || 0) > 0 && row.qty1 > (stockMap[row.lineNo] || 0)
+  )
+  if (overStockItems.length > 0) {
+    const names = overStockItems.map(r => `行${r.lineNo}: 需求${r.qty1} > 库存${stockMap[r.lineNo]}`).join('\n')
+    try {
+      await ElMessageBox.confirm(
+        `以下行超出库存：\n\n${names}\n\n确定继续保存吗？`,
+        '库存不足确认',
+        { confirmButtonText: '确认保存', cancelButtonText: '取消', type: 'warning' }
+      )
+    } catch { return }
+  }
+
   loading.value = true
   try {
-    // Save header fields first
     await axios.put(`/api/proforma-invoices/${pi.value.id}`, {
       invoiceDate: pi.value.invoiceDate,
       deliveryTerms: pi.value.deliveryTerms,

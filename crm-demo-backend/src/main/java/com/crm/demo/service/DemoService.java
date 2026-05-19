@@ -368,7 +368,8 @@ public class DemoService {
     @Transactional
     public Map<String, Object> approvePI(Long piId, boolean approved, String reason) {
         ProformaInvoice pi = piMapper.selectById(piId);
-        if (!"SUBMITTED".equals(pi.getStatus())) throw new RuntimeException("PI is not in SUBMITTED status");
+        if (pi == null) throw new RuntimeException("PI not found: " + piId);
+        if (!"SUBMITTED".equals(pi.getStatus())) throw new RuntimeException("PI status is " + pi.getStatus() + ", expected SUBMITTED");
         pi.setStatus(approved ? "APPROVED" : "REJECTED");
         pi.setRejectReason(approved ? null : reason);
         pi.setApprovedAt(LocalDateTime.now());
