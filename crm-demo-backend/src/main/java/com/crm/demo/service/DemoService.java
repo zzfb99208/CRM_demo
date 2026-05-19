@@ -377,7 +377,11 @@ public class DemoService {
             pi.setRejectReason(approved ? null : reason);
             pi.setApprovedAt(LocalDateTime.now());
             piMapper.updateById(pi);
-            return Map.of("piId", piId, "status", pi.getStatus(), "rejectReason", pi.getRejectReason());
+            Map<String, Object> result = new java.util.LinkedHashMap<>();
+            result.put("piId", piId);
+            result.put("status", pi.getStatus());
+            result.put("rejectReason", pi.getRejectReason()); // may be null, HashMap allows it
+            return result;
         } catch (Exception e) {
             e.printStackTrace();
             throw e;
