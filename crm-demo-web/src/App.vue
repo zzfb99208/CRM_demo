@@ -5,15 +5,12 @@
       <div style="color:white;padding:16px;font-size:16px;font-weight:bold">CRM Demo</div>
       <div style="color:#bfcbd9;padding:0 16px 12px;font-size:12px">{{ roleLabel }}</div>
       <el-menu :default-active="$route.path" router background-color="#304156" text-color="#bfcbd9" active-text-color="#409EFF">
-        <el-menu-item v-if="role==='APPROVER'" index="/approvals">PI 审核</el-menu-item>
+        <el-menu-item v-if="role==='APPROVER'" index="/approvals">PI审核&审核历史</el-menu-item>
         <el-menu-item index="/customers">客户管理</el-menu-item>
         <el-menu-item index="/products">产品总表</el-menu-item>
         <template v-if="role==='SALES'">
           <el-menu-item index="/purchase-orders">采购订单</el-menu-item>
-          <el-menu-item index="/proforma-invoices">形式发票</el-menu-item>
-        </template>
-        <template v-if="role==='APPROVER'">
-          <el-menu-item index="/proforma-invoices">形式发票</el-menu-item>
+          <el-menu-item index="/proforma-invoices">审核历史&形式发票</el-menu-item>
         </template>
         <el-menu-item index="/packing-lists">装箱单</el-menu-item>
       </el-menu>

@@ -3,6 +3,7 @@
     <el-button @click="$router.back()" style="margin-bottom:16px">← 返回</el-button>
     <div style="display:flex;justify-content:space-between;align-items:center">
       <h2 v-if="pi">Invoice: {{ pi.invoiceNo }} <el-tag :type="st(pi.status)">{{ pi.status }}</el-tag></h2>
+    <el-alert v-if="pi && pi.status==='REJECTED' && pi.rejectReason" type="error" :title="'该 PI 已被驳回，驳回原因：' + pi.rejectReason" :description="'请修改后重新提交审核'" show-icon style="margin-bottom:12px" />
       <div>
         <el-button :type="editing?'warning':''" @click="toggleEdit">{{ editing?'退出编辑':'编辑 ✏' }}</el-button>
         <el-button @click="doExportPI">导出 PI ⬇</el-button>

@@ -282,10 +282,11 @@ com.crm.demo
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
+| POST | `/api/approvals/pi/{id}` | ★ 审核者审批 PI（通过/驳回，含驳回原因） |
+| GET | `/api/approvals/pending` | ★ 待审核 PI 列表 |
+| GET | `/api/approvals/history` | ★ 审核历史（含驳回原因，支持按状态筛选） |
 | POST | `/api/approvals/po/{id}` | 审批 PO（预留） |
-| POST | `/api/approvals/pi/{id}` | 审批 PI（预留） |
 | POST | `/api/approvals/pl/{id}` | 审批 PL（预留） |
-| GET | `/api/approvals/pending` | 待审批列表（预留） |
 | GET | `/api/inventories` | 库存列表（预留） |
 | POST | `/api/inventories` | 入库（预留） |
 | PUT | `/api/inventories/{id}` | 编辑批次（预留） |

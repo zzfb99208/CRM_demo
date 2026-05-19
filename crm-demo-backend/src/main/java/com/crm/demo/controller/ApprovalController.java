@@ -14,6 +14,11 @@ public class ApprovalController {
     @GetMapping("/pending")
     public R<?> pending() { return R.ok(demoService.getPendingApprovals()); }
 
+    @GetMapping("/history")
+    public R<?> history(@RequestParam(required = false) String status) {
+        return R.ok(demoService.getApprovalHistory(status));
+    }
+
     @PostMapping("/pi/{id}")
     public R<?> approvePI(@PathVariable Long id, @RequestBody Map<String, Object> body) {
         try {

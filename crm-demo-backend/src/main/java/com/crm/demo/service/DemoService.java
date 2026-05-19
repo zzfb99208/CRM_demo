@@ -373,7 +373,28 @@ public class DemoService {
         pi.setRejectReason(approved ? null : reason);
         pi.setApprovedAt(LocalDateTime.now());
         piMapper.updateById(pi);
-        return Map.of("piId", piId, "status", pi.getStatus());
+        return Map.of("piId", piId, "status", pi.getStatus(), "rejectReason", pi.getRejectReason());
+    }
+
+    public List<Map<String, Object>> getApprovalHistory(String statusFilter) {
+        LambdaQueryWrapper<ProformaInvoice> q = new LambdaQueryWrapper<ProformaInvoice>()
+            .in(ProformaInvoice::getStatus, "APPROVED", "REJECTED", "PACKING_GENERATED")
+            .orderByDesc(ProformaInvoice::getApprovedAt);
+        if (statusFilter != null && !statusFilter.isEmpty() && !"ALL".equals(statusFilter))
+            q.eq(ProformaInvoice::getStatus, statusFilter);
+        List<ProformaInvoice> list = piMapper.selectList(q);
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (ProformaInvoice pi : list) {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("piId", pi.getId()); m.put("invoiceNo", pi.getInvoiceNo());
+            m.put("contractNo", pi.getContractNo()); m.put("totalValue", pi.getTotalValue());
+            m.put("status", pi.getStatus()); m.put("approvedAt", pi.getApprovedAt());
+            m.put("rejectReason", pi.getRejectReason()); m.put("submittedAt", pi.getSubmittedAt());
+            Customer c = customerMapper.selectById(pi.getCustomerId());
+            m.put("customerName", c != null ? c.getCompanyName() : "");
+            result.add(m);
+        }
+        return result;
     }
 
     // ==================== PI Reimport ====================
