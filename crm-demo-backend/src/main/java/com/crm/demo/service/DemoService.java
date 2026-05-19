@@ -367,14 +367,21 @@ public class DemoService {
 
     @Transactional
     public Map<String, Object> approvePI(Long piId, boolean approved, String reason) {
-        ProformaInvoice pi = piMapper.selectById(piId);
-        if (pi == null) throw new RuntimeException("PI not found: " + piId);
-        if (!"SUBMITTED".equals(pi.getStatus())) throw new RuntimeException("PI status is " + pi.getStatus() + ", expected SUBMITTED");
-        pi.setStatus(approved ? "APPROVED" : "REJECTED");
-        pi.setRejectReason(approved ? null : reason);
-        pi.setApprovedAt(LocalDateTime.now());
-        piMapper.updateById(pi);
-        return Map.of("piId", piId, "status", pi.getStatus(), "rejectReason", pi.getRejectReason());
+        try {
+            ProformaInvoice pi = piMapper.selectById(piId);
+            if (pi == null) throw new RuntimeException("PI not found: " + piId);
+            String currentStatus = pi.getStatus();
+            if (currentStatus == null) throw new RuntimeException("PI status is null");
+            if (!"SUBMITTED".equals(currentStatus)) throw new RuntimeException("PI status is " + currentStatus + ", expected SUBMITTED");
+            pi.setStatus(approved ? "APPROVED" : "REJECTED");
+            pi.setRejectReason(approved ? null : reason);
+            pi.setApprovedAt(LocalDateTime.now());
+            piMapper.updateById(pi);
+            return Map.of("piId", piId, "status", pi.getStatus(), "rejectReason", pi.getRejectReason());
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw e;
+        }
     }
 
     public List<Map<String, Object>> getApprovalHistory(String statusFilter) {
