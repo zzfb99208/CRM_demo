@@ -22,8 +22,10 @@ public class ApprovalController {
     @PostMapping("/pi/{id}")
     public R<?> approvePI(@PathVariable Long id, @RequestBody Map<String, Object> body) {
         try {
-            boolean approved = (boolean) body.get("approved");
-            String reason = (String) body.getOrDefault("reason", "");
+            Object approvedObj = body.get("approved");
+            if (approvedObj == null) throw new RuntimeException("missing 'approved' field");
+            boolean approved = Boolean.TRUE.equals(approvedObj) || "true".equals(String.valueOf(approvedObj));
+            String reason = body.containsKey("reason") ? String.valueOf(body.get("reason")) : "";
             return R.ok(demoService.approvePI(id, approved, reason));
         } catch (Exception e) { return R.fail("Approval failed: " + e.getMessage()); }
     }
