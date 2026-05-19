@@ -78,6 +78,7 @@
         <el-button @click="cancelEdit">取消编辑</el-button>
         <el-button type="success" @click="saveAll">保存全部修改</el-button>
       </template>
+      <el-button v-if="pi && pi.status==='APPROVED'" type="warning" @click="submitForApproval" :loading="submitting">提交审核</el-button>
       <el-button v-if="pi && pi.status==='APPROVED'" type="primary" @click="generatePL">生成 Packing List</el-button>
     </div>
 
@@ -104,10 +105,11 @@ import { useRoute, useRouter } from 'vue-router'
 import { getPIDetail, exportPI, reimportPI, updatePIItem } from '@/api/proformaInvoice'
 import { generatePL as apiGeneratePL } from '@/api/packingList'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import axios from 'axios'
 
 const route = useRoute(); const router = useRouter()
 const pi = ref(null); const items = ref([]); const warnings = ref([]); const loading = ref(false)
-const editing = ref(false); const originalItems = ref([])
+const editing = ref(false); const originalItems = ref([]); const submitting = ref(false)
 const stockMap = reactive({})
 const diffVisible = ref(false); const diffResult = ref(null)
 
@@ -169,6 +171,17 @@ const saveAll = async () => {
   finally { loading.value = false }
 }
 
+const submitForApproval = async () => {
+  submitting.value = true
+  try {
+    const { data } = await axios.post(`/api/proforma-invoices/${pi.value.id}/submit`, {}, {
+      headers: { Authorization: 'Bearer ' + localStorage.getItem('token') }
+    })
+    if (data.code === 200) { ElMessage.success('已提交审核'); load() }
+    else ElMessage.error(data.message)
+  } catch (e) { ElMessage.error('提交失败') }
+  finally { submitting.value = false }
+}
 const doExportPI = () => exportPI(pi.value.id)
 const handleReimport = async (f) => {
   loading.value = true

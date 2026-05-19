@@ -38,6 +38,12 @@ public class ProformaInvoiceController {
         catch (Exception e) { return R.fail("Update failed: " + e.getMessage()); }
     }
 
+    @PostMapping("/{id}/submit")
+    public R<?> submit(@PathVariable Long id) {
+        try { return R.ok(demoService.submitPIForApproval(id)); }
+        catch (Exception e) { return R.fail("Submit failed: " + e.getMessage()); }
+    }
+
     @PostMapping("/{id}/import")
     public R<?> reimport(@PathVariable Long id, @RequestParam("file") MultipartFile file) {
         try { return R.ok(demoService.reimportPI(id, file)); }

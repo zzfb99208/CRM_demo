@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
 const routes = [
+  { path: '/login', name: 'Login', component: () => import('@/views/Login.vue') },
   { path: '/', redirect: '/customers' },
   { path: '/customers', name: 'CustomerList', component: () => import('@/views/customer/CustomerList.vue') },
   { path: '/customers/:id', name: 'CustomerDetail', component: () => import('@/views/customer/CustomerDetail.vue') },
@@ -11,7 +12,16 @@ const routes = [
   { path: '/proforma-invoices', name: 'PIList', component: () => import('@/views/pi/ProformaInvoiceList.vue') },
   { path: '/proforma-invoices/:id', name: 'PIDetail', component: () => import('@/views/pi/ProformaInvoiceDetail.vue') },
   { path: '/packing-lists', name: 'PLList', component: () => import('@/views/pl/PackingListList.vue') },
-  { path: '/packing-lists/:id', name: 'PLDetail', component: () => import('@/views/pl/PackingListDetail.vue') }
+  { path: '/packing-lists/:id', name: 'PLDetail', component: () => import('@/views/pl/PackingListDetail.vue') },
+  { path: '/approvals', name: 'Approvals', component: () => import('@/views/approval/ApprovalWorkbench.vue') }
 ]
 
-export default createRouter({ history: createWebHistory(), routes })
+const router = createRouter({ history: createWebHistory(), routes })
+
+router.beforeEach((to) => {
+  const token = localStorage.getItem('token')
+  if (to.path !== '/login' && !token) return '/login'
+  return true
+})
+
+export default router

@@ -11,7 +11,8 @@ public class ProformaInvoice {
     private String paymentTerms; private String transportMethod; private String countryOfOrigin;
     private String poReference; private BigDecimal totalValue; private String status;
     private Long createdBy; private Long approvedBy; private LocalDateTime approvedAt;
-    private String rejectReason; private LocalDateTime createdAt; private LocalDateTime updatedAt;
+    private String rejectReason; private Long submittedBy; private LocalDateTime submittedAt;
+    private LocalDateTime createdAt; private LocalDateTime updatedAt;
 
     public Long getId() { return id; } public void setId(Long v) { this.id = v; }
     public String getInvoiceNo() { return invoiceNo; } public void setInvoiceNo(String v) { this.invoiceNo = v; }
@@ -31,6 +32,8 @@ public class ProformaInvoice {
     public Long getApprovedBy() { return approvedBy; } public void setApprovedBy(Long v) { this.approvedBy = v; }
     public LocalDateTime getApprovedAt() { return approvedAt; } public void setApprovedAt(LocalDateTime v) { this.approvedAt = v; }
     public String getRejectReason() { return rejectReason; } public void setRejectReason(String v) { this.rejectReason = v; }
+    public Long getSubmittedBy() { return submittedBy; } public void setSubmittedBy(Long v) { this.submittedBy = v; }
+    public LocalDateTime getSubmittedAt() { return submittedAt; } public void setSubmittedAt(LocalDateTime v) { this.submittedAt = v; }
     public LocalDateTime getCreatedAt() { return createdAt; } public void setCreatedAt(LocalDateTime v) { this.createdAt = v; }
     public LocalDateTime getUpdatedAt() { return updatedAt; } public void setUpdatedAt(LocalDateTime v) { this.updatedAt = v; }
 }

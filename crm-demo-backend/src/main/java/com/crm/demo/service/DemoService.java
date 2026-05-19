@@ -318,6 +318,46 @@ public class DemoService {
         return result;
     }
 
+    // ==================== PI Submit & Approval ====================
+    @Transactional
+    public Map<String, Object> submitPIForApproval(Long piId) {
+        ProformaInvoice pi = piMapper.selectById(piId);
+        if (!"APPROVED".equals(pi.getStatus()) && !"DRAFT".equals(pi.getStatus()) && !"REJECTED".equals(pi.getStatus()))
+            throw new RuntimeException("PI status " + pi.getStatus() + " cannot be submitted");
+        pi.setStatus("SUBMITTED");
+        pi.setSubmittedAt(LocalDateTime.now());
+        piMapper.updateById(pi);
+        return Map.of("piId", piId, "status", "SUBMITTED");
+    }
+
+    public List<Map<String, Object>> getPendingApprovals() {
+        List<ProformaInvoice> list = piMapper.selectList(
+            new LambdaQueryWrapper<ProformaInvoice>().eq(ProformaInvoice::getStatus, "SUBMITTED")
+                .orderByDesc(ProformaInvoice::getSubmittedAt));
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (ProformaInvoice pi : list) {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("piId", pi.getId()); m.put("invoiceNo", pi.getInvoiceNo());
+            m.put("contractNo", pi.getContractNo()); m.put("totalValue", pi.getTotalValue());
+            m.put("submittedAt", pi.getSubmittedAt());
+            Customer c = customerMapper.selectById(pi.getCustomerId());
+            m.put("customerName", c != null ? c.getCompanyName() : "");
+            result.add(m);
+        }
+        return result;
+    }
+
+    @Transactional
+    public Map<String, Object> approvePI(Long piId, boolean approved, String reason) {
+        ProformaInvoice pi = piMapper.selectById(piId);
+        if (!"SUBMITTED".equals(pi.getStatus())) throw new RuntimeException("PI is not in SUBMITTED status");
+        pi.setStatus(approved ? "APPROVED" : "REJECTED");
+        pi.setRejectReason(approved ? null : reason);
+        pi.setApprovedAt(LocalDateTime.now());
+        piMapper.updateById(pi);
+        return Map.of("piId", piId, "status", pi.getStatus());
+    }
+
     // ==================== PI Reimport ====================
     @Transactional
     public Map<String, Object> reimportPI(Long piId, MultipartFile file) throws IOException {
