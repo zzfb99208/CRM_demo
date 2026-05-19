@@ -88,12 +88,17 @@ const onTabChange = (name) => {
 }
 
 const handleApprove = async (piId, approved) => {
-  const reason = approved ? '' : (prompt('驳回原因:') || '')
+  let reason = ''
+  if (!approved) {
+    const input = prompt('驳回原因:')
+    if (input === null) return  // Cancel clicked, abort
+    reason = input || ''
+  }
   try {
     const { data } = await axios.post(`/api/approvals/pi/${piId}`, { approved, reason }, { headers: headers() })
     if (data.code === 200) { ElMessage.success(approved ? '已通过' : '已驳回'); loadPending() }
     else ElMessage.error(data.message)
-  } catch (e) { ElMessage.error('操作失败') }
+  } catch (e) { ElMessage.error('操作失败: ' + (e.response?.data?.message || e.message)) }
 }
 
 onMounted(() => loadPending())
