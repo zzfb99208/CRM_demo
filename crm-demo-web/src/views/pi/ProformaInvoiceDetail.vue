@@ -95,7 +95,7 @@
         <el-button @click="cancelEdit">取消编辑</el-button>
         <el-button type="success" @click="saveAll">保存全部修改</el-button>
       </template>
-      <el-button v-if="pi && pi.status==='APPROVED'" type="warning" @click="submitForApproval" :loading="submitting">提交审核</el-button>
+      <el-button v-if="pi && pi.status!=='SUBMITTED' && pi.status!=='PACKING_GENERATED'" type="warning" @click="submitForApproval" :loading="submitting">提交审核</el-button>
       <el-button v-if="pi && pi.status==='APPROVED'" type="primary" @click="generatePL">生成 Packing List</el-button>
     </div>
 
@@ -111,7 +111,7 @@
           <el-table-column prop="newValue" label="新值" width="100" />
         </el-table>
       </div>
-      <template #footer><el-button @click="diffVisible=false">取消</el-button><el-button type="primary" @click="diffVisible=false">确认</el-button></template>
+      <template #footer><el-button @click="diffVisible=false">取消</el-button><el-button type="primary" @click="confirmReimport">确认</el-button></template>
     </el-dialog>
   </div>
 </template>
@@ -226,6 +226,10 @@ const handleReimport = async (f) => {
   try { diffResult.value = await reimportPI(pi.value.id, f.raw); diffVisible.value = true }
   catch(e) { ElMessage.error('导入失败') }
   finally { loading.value = false }
+}
+const confirmReimport = () => {
+  diffVisible.value = false
+  load()
 }
 const generatePL = async () => {
   loading.value = true

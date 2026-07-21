@@ -275,6 +275,11 @@ public class DemoService {
     // ==================== PI Online Edit ====================
     @Transactional
     public Map<String, Object> updatePIItem(Long piId, Long itemId, Map<String, Object> updates) {
+        // Reset REJECTED status to DRAFT when user edits items
+        ProformaInvoice pi = piMapper.selectById(piId);
+        if ("REJECTED".equals(pi.getStatus())) {
+            pi.setStatus("DRAFT"); pi.setRejectReason(null); piMapper.updateById(pi);
+        }
         ProformaInvoiceItem item = piItemMapper.selectById(itemId);
         if (item == null || !item.getPiId().equals(piId)) {
             throw new RuntimeException("PI item not found");
@@ -296,8 +301,7 @@ public class DemoService {
         if (updates.containsKey("qty2")) item.setQty2(((Number) updates.get("qty2")).intValue());
         piItemMapper.updateById(item);
 
-        // Recalculate total value
-        ProformaInvoice pi = piMapper.selectById(piId);
+        // Recalculate total value (reuse pi from above)
         List<ProformaInvoiceItem> items = piItemMapper.selectList(
             new LambdaQueryWrapper<ProformaInvoiceItem>().eq(ProformaInvoiceItem::getPiId, piId));
         BigDecimal total = items.stream().map(i -> i.getLineValue() != null ? i.getLineValue() : BigDecimal.ZERO).reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -322,6 +326,10 @@ public class DemoService {
     @Transactional
     public Map<String, Object> updatePIHeader(Long piId, Map<String, Object> updates) {
         ProformaInvoice pi = piMapper.selectById(piId);
+        // Reset REJECTED status to DRAFT when user edits header
+        if ("REJECTED".equals(pi.getStatus())) {
+            pi.setStatus("DRAFT"); pi.setRejectReason(null);
+        }
         if (updates.containsKey("invoiceDate"))
             pi.setInvoiceDate(LocalDate.parse((String) updates.get("invoiceDate")));
         if (updates.containsKey("deliveryTerms"))
@@ -458,6 +466,15 @@ public class DemoService {
         result.put("summary", Map.of("modifiedCount", changes.stream().filter(c -> "MODIFIED".equals(c.get("type"))).count(),
             "addedCount", changes.stream().filter(c -> "ADDED".equals(c.get("type"))).count(),
             "deletedCount", changes.stream().filter(c -> "DELETED".equals(c.get("type"))).count()));
+
+        // Reset PI status to DRAFT if changes detected, so user can re-submit
+        if (!changes.isEmpty()) {
+            String currentStatus = pi.getStatus();
+            if ("APPROVED".equals(currentStatus) || "REJECTED".equals(currentStatus) || "PACKING_GENERATED".equals(currentStatus)) {
+                pi.setStatus("DRAFT");
+                piMapper.updateById(pi);
+            }
+        }
         return result;
     }
 

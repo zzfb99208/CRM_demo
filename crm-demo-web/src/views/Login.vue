@@ -27,7 +27,7 @@ const login = async () => {
       localStorage.setItem('token', data.data.token)
       localStorage.setItem('role', data.data.role)
       localStorage.setItem('displayName', data.data.displayName)
-      router.push(data.data.role === 'APPROVER' ? '/approvals' : '/customers')
+      window.location.href = data.data.role === 'APPROVER' ? '/approvals' : '/customers'
     } else { ElMessage.error(data.message) }
   } catch (e) { ElMessage.error('登录失败') }
   finally { loading.value = false }
