@@ -95,7 +95,7 @@
         <el-button @click="cancelEdit">取消编辑</el-button>
         <el-button type="success" @click="saveAll">保存全部修改</el-button>
       </template>
-      <el-button v-if="pi && pi.status!=='SUBMITTED' && pi.status!=='PACKING_GENERATED'" type="warning" @click="submitForApproval" :loading="submitting">提交审核</el-button>
+      <el-button v-if="pi && pi.status!=='SUBMITTED'" type="warning" @click="submitForApproval" :loading="submitting">提交审核</el-button>
       <el-button v-if="pi && pi.status==='APPROVED'" type="primary" @click="generatePL">生成 Packing List</el-button>
     </div>
 
@@ -167,6 +167,7 @@ const saveRow = async (row) => {
     })
     stockMap[row.lineNo] = result.stockAvailable
     pi.value.totalValue = result.totalValue
+    if (result.status) pi.value.status = result.status
     ElMessage.success(`行 ${row.lineNo} 已保存`)
   } catch (e) { ElMessage.error('保存失败') }
   finally { loading.value = false }

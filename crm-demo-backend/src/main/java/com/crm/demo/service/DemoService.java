@@ -275,9 +275,9 @@ public class DemoService {
     // ==================== PI Online Edit ====================
     @Transactional
     public Map<String, Object> updatePIItem(Long piId, Long itemId, Map<String, Object> updates) {
-        // Reset REJECTED status to DRAFT when user edits items
+        // Reset REJECTED / PACKING_GENERATED status to DRAFT when user edits items
         ProformaInvoice pi = piMapper.selectById(piId);
-        if ("REJECTED".equals(pi.getStatus())) {
+        if ("REJECTED".equals(pi.getStatus()) || "PACKING_GENERATED".equals(pi.getStatus())) {
             pi.setStatus("DRAFT"); pi.setRejectReason(null); piMapper.updateById(pi);
         }
         ProformaInvoiceItem item = piItemMapper.selectById(itemId);
@@ -319,6 +319,7 @@ public class DemoService {
         result.put("totalValue", total);
         result.put("stockAvailable", avail);
         result.put("stockSufficient", avail >= item.getQty1());
+        result.put("status", pi.getStatus());
         return result;
     }
 
@@ -327,7 +328,7 @@ public class DemoService {
     public Map<String, Object> updatePIHeader(Long piId, Map<String, Object> updates) {
         ProformaInvoice pi = piMapper.selectById(piId);
         // Reset REJECTED status to DRAFT when user edits header
-        if ("REJECTED".equals(pi.getStatus())) {
+        if ("REJECTED".equals(pi.getStatus()) || "PACKING_GENERATED".equals(pi.getStatus())) {
             pi.setStatus("DRAFT"); pi.setRejectReason(null);
         }
         if (updates.containsKey("invoiceDate"))
@@ -348,7 +349,7 @@ public class DemoService {
     @Transactional
     public Map<String, Object> submitPIForApproval(Long piId) {
         ProformaInvoice pi = piMapper.selectById(piId);
-        if (!"APPROVED".equals(pi.getStatus()) && !"DRAFT".equals(pi.getStatus()) && !"REJECTED".equals(pi.getStatus()))
+        if (!"APPROVED".equals(pi.getStatus()) && !"DRAFT".equals(pi.getStatus()) && !"REJECTED".equals(pi.getStatus()) && !"PACKING_GENERATED".equals(pi.getStatus()))
             throw new RuntimeException("PI status " + pi.getStatus() + " cannot be submitted");
         pi.setStatus("SUBMITTED");
         pi.setSubmittedAt(LocalDateTime.now());

@@ -1,6 +1,6 @@
 <template>
   <div v-loading="loading">
-    <el-button @click="$router.back()" style="margin-bottom:16px">← 返回</el-button>
+    <el-button @click="goBack" style="margin-bottom:16px">← 返回 PI 详情</el-button>
     <div style="display:flex;justify-content:space-between;align-items:center">
       <h2 v-if="pl">Packing List — {{ pl.contractNo }} <el-tag type="success">{{ pl.status }}</el-tag></h2>
       <el-button type="primary" @click="doExportPL">导出 PL ⬇</el-button>
@@ -38,11 +38,12 @@
 </template>
 <script setup>
 import { ref, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { getPLDetail, exportPL } from '@/api/packingList'
-const route = useRoute()
+const route = useRoute(); const router = useRouter()
 const pl = ref(null); const items = ref([]); const loading = ref(false)
 const load = async () => { loading.value = true; try { const d = await getPLDetail(route.params.id); pl.value = d.pl; items.value = d.items } finally { loading.value = false } }
 const doExportPL = () => exportPL(pl.value.id)
+const goBack = () => { pl.value?.piId ? router.push(`/proforma-invoices/${pl.value.piId}`) : router.back() }
 onMounted(() => load())
 </script>
